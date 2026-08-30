@@ -1,0 +1,6 @@
+{
+  "name": "ChatForge",
+  "description": "BYOK (Bring Your Own Key) multi-provider AI chat client with real-time streaming, token usage tracking, and 100% client-side privacy.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
