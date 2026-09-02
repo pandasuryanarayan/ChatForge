@@ -10,9 +10,12 @@ import {
   Edit3,
   Layers,
   Zap,
+  Video,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { Conversation, ModelInfo, ProviderCredential, ProviderId } from '../types';
 import { PROVIDERS } from '../constants/providers';
+import { formatContextWindow } from '../utils/modelSpecs';
 import { ProviderIcon } from './ProviderIcon';
 
 interface BentoInspectorProps {
@@ -134,16 +137,46 @@ export const BentoInspector: React.FC<BentoInspectorProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="p-1.5 rounded-lg bg-blue-600/10 text-blue-400 border border-blue-500/20 shrink-0">
-              <Bot className="w-3.5 h-3.5" />
+            <div
+              className={`p-1.5 rounded-lg shrink-0 border ${
+                activeModelInfo?.isVideoGen
+                  ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                  : activeModelInfo?.isImageGen
+                  ? 'bg-pink-500/10 text-pink-400 border-pink-500/20'
+                  : 'bg-blue-600/10 text-blue-400 border-blue-500/20'
+              }`}
+            >
+              {activeModelInfo?.isVideoGen ? (
+                <Video className="w-3.5 h-3.5" />
+              ) : activeModelInfo?.isImageGen ? (
+                <ImageIcon className="w-3.5 h-3.5" />
+              ) : (
+                <Bot className="w-3.5 h-3.5" />
+              )}
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-xs font-semibold text-zinc-200 truncate">
-                {activeModelInfo?.name || activeModelId}
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-zinc-200 truncate">
+                  {activeModelInfo?.name || activeModelId}
+                </span>
+                {activeModelInfo?.isVideoGen && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20 font-medium">
+                    Video Gen
+                  </span>
+                )}
+                {activeModelInfo?.isImageGen && (
+                  <span className="text-[9px] px-1 py-0.2 rounded bg-pink-500/10 text-pink-400 border border-pink-500/20 font-medium">
+                    Image Gen
+                  </span>
+                )}
               </div>
               <div className="text-[10px] text-zinc-500 font-mono truncate">
-                {activeModelInfo?.contextWindow
-                  ? `${Math.round(activeModelInfo.contextWindow / 1000)}k context window`
+                {activeModelInfo?.isVideoGen
+                  ? 'Video Synthesis'
+                  : activeModelInfo?.isImageGen
+                  ? 'Image Synthesis'
+                  : activeModelInfo?.contextWindow
+                  ? `${formatContextWindow(activeModelInfo.contextWindow)} context window`
                   : activeModelId}
               </div>
             </div>

@@ -140,7 +140,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
           </div>
         ) : (
           <ProviderIcon
-            providerId={modelInfo?.provider || 'openai'}
+            providerId={modelInfo?.provider || message.providerId || 'openai'}
             size="lg"
             className="!rounded-xl shadow-md"
           />
@@ -156,7 +156,7 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                   isUser ? 'text-zinc-300' : hasError && !message.content ? 'text-amber-400' : 'text-blue-400'
                 }`}
               >
-                {isUser ? 'You' : modelInfo?.name || 'AI Assistant'}
+                {isUser ? 'You' : modelInfo?.name || message.modelId || 'AI Assistant'}
               </span>
 
               {/* Timestamp */}

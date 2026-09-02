@@ -8,6 +8,7 @@ import {
   StreamEventCallbacks,
 } from '../types';
 import { PROVIDERS } from '../constants/providers';
+import { encryptForTransit } from '../utils/security';
 
 // Token Estimator: ~4 characters per token average
 export function estimateTokens(text: string): number {
@@ -107,14 +108,19 @@ export async function testProviderKey(
     return { valid: false, message: 'API key is required' };
   }
 
-  // 1. Try server-side validation endpoint (bypasses browser CORS & uses real upstream endpoints)
+  const encryptedKey = key ? encryptForTransit(key) : '';
+
+  // 1. Try server-side validation endpoint with encrypted credentials
   try {
     const res = await fetch('/api/validate-key', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(encryptedKey ? { 'X-Encrypted-API-Key': encryptedKey } : {}),
+      },
       body: JSON.stringify({
         providerId,
-        apiKey: key,
+        apiKey: encryptedKey,
         customBaseUrl: customBase,
       }),
     });
@@ -196,15 +202,19 @@ export async function fetchModelsFromProvider(
   const providerConfig = PROVIDERS.find((p) => p.id === providerId);
   const key = sanitizeApiKey(credential.apiKey);
   const customBase = credential.customBaseUrl?.trim();
+  const encryptedKey = key ? encryptForTransit(key) : '';
 
-  // Try server-side endpoint first
+  // Try server-side endpoint first with encrypted credentials
   try {
     const res = await fetch('/api/fetch-models', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(encryptedKey ? { 'X-Encrypted-API-Key': encryptedKey } : {}),
+      },
       body: JSON.stringify({
         providerId,
-        apiKey: key,
+        apiKey: encryptedKey,
         customBaseUrl: customBase,
       }),
     });
@@ -242,6 +252,8 @@ export async function streamChat(
     throw new Error(`Please provide an API key for ${providerConfig.name} in Key Settings.`);
   }
 
+  const encryptedKey = key ? encryptForTransit(key) : '';
+
   let accumulatedContent = '';
   let accumulatedReasoning = '';
   const promptTokensCount =
@@ -249,15 +261,16 @@ export async function streamChat(
     estimateTokens(systemPrompt || '');
   let completionTokensCount = 0;
 
-  // Stream via full-stack /api/chat-stream endpoint
+  // Stream via full-stack /api/chat-stream endpoint with encrypted in-flight payload
   const response = await fetch('/api/chat-stream', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      ...(encryptedKey ? { 'X-Encrypted-API-Key': encryptedKey } : {}),
     },
     body: JSON.stringify({
       conversation,
-      apiKey: key,
+      apiKey: encryptedKey,
       customBaseUrl: customBase,
     }),
     signal,

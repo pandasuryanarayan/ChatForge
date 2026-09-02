@@ -27,8 +27,12 @@ export interface ModelInfo {
   contextWindow?: number;
   inputPrice?: number; // USD per 1M tokens
   outputPrice?: number; // USD per 1M tokens
+  perUnitCost?: number; // e.g. 0.03 for video/image generation
+  perUnitLabel?: string; // e.g. 'per video' or 'per image'
   isReasoning?: boolean;
   isVision?: boolean;
+  isImageGen?: boolean;
+  isVideoGen?: boolean;
   isPinned?: boolean;
   isCustom?: boolean;
 }

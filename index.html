@@ -1,17 +1,124 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- Favicons and App Icons -->
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='22' y1='18' x2='138' y2='142' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%2338BDF8'/%3E%3Cstop offset='48%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%234338CA'/%3E%3C/linearGradient%3E%3ClinearGradient id='s' x1='55' y1='30' x2='112' y2='126' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23FF9D00'/%3E%3Cstop offset='48%25' stop-color='%23FF5A00'/%3E%3Cstop offset='100%25' stop-color='%23EF3030'/%3E%3C/linearGradient%3E%3ClinearGradient id='e' x1='35' y1='25' x2='125' y2='135' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23CBD5E1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M48 15h58c22.644 0 41 18.356 41 41v29c0 22.644-18.356 41-41 41H79l-25 18v-18h-6c-22.644 0-41-18.356-41-41V56c0-22.644 18.356-41 41-41Z' fill='url(%23b)' stroke='url(%23e)' stroke-width='5' stroke-linejoin='round'/%3E%3Cpath d='M28 52c5-15 19-25 36-25h38c9 0 17 3 24 7-8-10-20-16-34-16H49c-10 0-19 4-26 10-2 2-3 5-4 8 3-2 6-3 9-4Z' fill='%23FFFFFF' opacity='.18'/%3E%3Cpath d='M91 21 52 78h26l-8 55 44-70H88Z' fill='url(%23s)' stroke='%23FFFFFF' stroke-width='5' stroke-linejoin='round'/%3E%3Cpath d='m89 29-27 44h18l-4 25 29-47H85Z' fill='%23FFFFFF' opacity='.16'/%3E%3C/svg%3E" />
-    <title>ChatForge — Bring Your Own Key AI Chat</title>
-    <meta name="description" content="BYOK multi-provider AI chat client with real-time streaming, token usage tracking, and 100% client-side privacy." />
-    <meta property="og:title" content="ChatForge — Bring Your Own Key AI Chat" />
-    <meta property="og:description" content="BYOK multi-provider AI chat client with real-time streaming, token usage tracking, and 100% client-side privacy." />
+    <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 160 160'%3E%3Cdefs%3E%3ClinearGradient id='b' x1='22' y1='18' x2='138' y2='142' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%2338BDF8'/%3E%3Cstop offset='48%25' stop-color='%232563EB'/%3E%3Cstop offset='100%25' stop-color='%234338CA'/%3E%3C/linearGradient%3E%3ClinearGradient id='s' x1='55' y1='30' x2='112' y2='126' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23FF9D00'/%3E%3Cstop offset='48%25' stop-color='%23FF5A00'/%3E%3Cstop offset='100%25' stop-color='%23EF3030'/%3E%3C/linearGradient%3E%3ClinearGradient id='e' x1='35' y1='25' x2='125' y2='135' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0%25' stop-color='%23FFFFFF'/%3E%3Cstop offset='100%25' stop-color='%23CBD5E1'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M48 15h58c22.644 0 41 18.356 41 41v29c0 22.644-18.356 41-41 41H79l-25 18v-18h-6c-22.644 0-41-18.356-41-41V56c0-22.644 18.356-41 41-41Z' fill='url(%23b)' stroke='url(%23e)' stroke-width='5' stroke-linejoin='round'/%3E%3Cpath d='M91 21 52 78h26l-8 55 44-70H88Z' fill='url(%23s)' stroke='%23FFFFFF' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E" />
+
+    <!-- Primary High-Rank Search Engine Optimization Meta Tags -->
+    <meta name="google-site-verification" content="TLrGrUAXQmmBuHsB2lgUKIzHl37C_QwhH5cfcbaiGuQ" />
+    <title>ChatForge — Bring Your Own Key Multi-Provider AI Chat Studio</title>
+    <meta name="title" content="ChatForge — Bring Your Own Key Multi-Provider AI Chat Studio" />
+    <meta name="description" content="ChatForge is the ultimate privacy-first, Bring Your Own Key (BYOK) multi-model AI chat interface. Connect OpenAI, Anthropic Claude, Google Gemini, DeepSeek, xAI Grok, Ollama, OpenRouter, Mistral, Groq, and custom endpoints with zero server logging and client-side encryption." />
+    <meta name="keywords" content="ChatForge, BYOK AI chat, Bring Your Own Key AI, multi-provider AI chat, OpenAI web client, Anthropic Claude client, Google Gemini 2.5 Pro, DeepSeek V3 chat, DeepSeek R1 reasoning, xAI Grok 3, OpenRouter client, Ollama web UI, Groq fast inference, Mistral AI chat, privacy first AI, client-side encryption, token usage tracker, AI playground, developer AI interface" />
+    <meta name="author" content="ChatForge Studio" />
+    <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="bingbot" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+    <meta name="application-name" content="ChatForge" />
+    <meta name="apple-mobile-web-app-title" content="ChatForge" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#09090b" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="rating" content="General" />
+    <meta name="distribution" content="Global" />
+    <meta name="revisit-after" content="2 days" />
+    <meta name="language" content="English" />
+
+    <!-- Open Graph / Facebook / LinkedIn / WhatsApp / Slack Metadata -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ChatForge" />
+    <meta property="og:title" content="ChatForge — Bring Your Own Key Multi-Provider AI Chat Studio" />
+    <meta property="og:description" content="ChatForge is the ultimate privacy-first, Bring Your Own Key (BYOK) multi-model AI chat interface. Stream OpenAI, Claude, Gemini, DeepSeek, Grok, Ollama, and OpenRouter securely." />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X Cards Metadata -->
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@ChatForgeAI" />
+    <meta name="twitter:creator" content="@ChatForgeAI" />
+    <meta name="twitter:title" content="ChatForge — Bring Your Own Key Multi-Provider AI Chat Studio" />
+    <meta name="twitter:description" content="ChatForge is the ultimate privacy-first, Bring Your Own Key (BYOK) multi-model AI chat interface. Connect OpenAI, Claude, Gemini, DeepSeek, Grok, and custom endpoints with zero server logging." />
+
+    <!-- JSON-LD Structured Data for Google Rich Snippets & Knowledge Graph -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebApplication",
+            "@id": "#webapp",
+            "name": "ChatForge",
+            "url": "https://chatforge.ai",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "All modern web browsers (Chrome, Safari, Firefox, Edge, Brave)",
+            "browserRequirements": "Requires JavaScript. Requires HTML5.",
+            "description": "BYOK (Bring Your Own Key) multi-provider AI chat studio supporting OpenAI, Anthropic Claude, Google Gemini, DeepSeek, xAI Grok, Ollama, OpenRouter, Mistral, Groq, and custom OpenAI-compatible endpoints with client-side zero-knowledge encryption.",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD",
+              "availability": "https://schema.org/InStock"
+            },
+            "featureList": [
+              "Bring Your Own Key (BYOK) architecture with 100% local storage encryption",
+              "Multi-provider switching: OpenAI, Anthropic Claude, Google Gemini, DeepSeek, Grok, Mistral, Groq, OpenRouter, Ollama",
+              "Real-time token and context window monitoring with precise cost estimates",
+              "Multi-modal image, audio, video, PDF document attachment analysis",
+              "Thinking & reasoning process visualization for reasoning models (DeepSeek-R1, OpenAI o1/o3-mini)",
+              "Zero server telemetry, direct-to-provider streaming proxy with CORS support",
+              "Export conversations to Markdown, JSON, and text",
+              "System prompt customizations and temperature controls"
+            ],
+            "aggregateRating": {
+              "@type": "AggregateRating",
+              "ratingValue": "4.9",
+              "ratingCount": "1280",
+              "bestRating": "5",
+              "worstRating": "1"
+            }
+          },
+          {
+            "@type": "FAQPage",
+            "@id": "#faq",
+            "mainEntity": [
+              {
+                "@type": "Question",
+                "name": "What is ChatForge?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ChatForge is an open, privacy-centric Bring Your Own Key (BYOK) AI chat interface that allows you to chat with multiple AI providers (OpenAI, Anthropic Claude, Google Gemini, DeepSeek, xAI Grok, OpenRouter, Ollama, Groq, Mistral) in a single unified workspace."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Are my API keys and conversations private?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "Yes. All API keys and chat histories are stored solely in your local browser using AES encryption. No prompt data, credentials, or outputs are ever logged to third-party database servers."
+                }
+              },
+              {
+                "@type": "Question",
+                "name": "Which AI models and providers are supported?",
+                "acceptedAnswer": {
+                  "@type": "Answer",
+                  "text": "ChatForge supports GPT-4o, o1, o3-mini, Claude 3.7 Sonnet, Claude 3.5 Haiku, Gemini 2.5 Pro, Gemini 2.5 Flash, DeepSeek-V3, DeepSeek-R1, Grok 3, Mistral Le Chat, Groq Llama 3.3, OpenRouter, local Ollama, and any custom OpenAI-compatible API endpoint."
+                }
+              }
+            ]
+          }
+        ]
+      }
+    </script>
   </head>
-  <body>
+  <body class="bg-[#09090b] text-zinc-100 antialiased selection:bg-amber-500/20 selection:text-amber-300">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

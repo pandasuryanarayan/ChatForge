@@ -89,105 +89,107 @@ export const ChatForgeIcon: React.FC<LogoProps> = ({
 };
 
 /**
- * ChatForge Wordmark: 320x80
+ * ChatForge Wordmark: Custom Stylized Wordmark from ChatForge Brand Assets.
+ * "Chat" in vivid orange-red gradient, "Forge" in electric-to-royal blue gradient
+ * with the signature lightning bolt inscribed inside the letter 'o'.
  */
 export const ChatForgeWordmark: React.FC<{
   className?: string;
   textColor?: string;
-}> = ({ className = 'h-7 w-auto', textColor = '#F4F4F5' }) => {
+}> = ({ className = 'h-7 w-auto' }) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 320 80"
+      viewBox="0 0 505 110"
       className={`shrink-0 ${className}`}
       role="img"
       aria-label="ChatForge"
     >
       <title>ChatForge</title>
       <defs>
-        <linearGradient id="cf-wordmark-forge" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="#4F46E5" />
-          <stop offset="100%" stopColor="#2563EB" />
+        <linearGradient id="cf-wordmark-orange" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#FF4200" />
+          <stop offset="45%" stopColor="#FF5C00" />
+          <stop offset="100%" stopColor="#FF7D00" />
+        </linearGradient>
+        <linearGradient id="cf-wordmark-blue" x1="0" y1="0" x2="1" y2="0">
+          <stop offset="0%" stopColor="#0088FF" />
+          <stop offset="50%" stopColor="#0066FF" />
+          <stop offset="100%" stopColor="#0044FF" />
+        </linearGradient>
+        <linearGradient id="cf-wordmark-bolt" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#007CF0" />
+          <stop offset="100%" stopColor="#0048E6" />
         </linearGradient>
       </defs>
+
+      {/* "Chat" in Orange Gradient */}
       <text
-        x="10"
-        y="55"
-        fontFamily="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontSize="52"
-        fontWeight="750"
-        letterSpacing="-2.2"
+        x="6"
+        y="85"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        fontSize="96"
+        fontWeight="900"
+        letterSpacing="-3.5"
+        fill="url(#cf-wordmark-orange)"
       >
-        <tspan fill={textColor}>Chat</tspan>
-        <tspan fill="url(#cf-wordmark-forge)">Forge</tspan>
+        Chat
+      </text>
+
+      {/* "F" in Blue Gradient */}
+      <text
+        x="228"
+        y="85"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        fontSize="96"
+        fontWeight="900"
+        letterSpacing="-2"
+        fill="url(#cf-wordmark-blue)"
+      >
+        F
+      </text>
+
+      {/* 'o' with embedded white badge & lightning bolt */}
+      <g transform="translate(310, 60.5)">
+        {/* Outer blue circular body */}
+        <circle cx="0" cy="0" r="25.5" fill="url(#cf-wordmark-blue)" />
+        {/* Inner white circle */}
+        <circle cx="0" cy="0" r="16" fill="#FFFFFF" />
+        {/* Inner electric lightning bolt */}
+        <path
+          d="M2.5 -11.5 L-6 1.5 H0 L-2.5 11.5 L6.5 -1.5 H0.5 Z"
+          fill="url(#cf-wordmark-bolt)"
+          strokeLinejoin="round"
+        />
+      </g>
+
+      {/* "rge" in Blue Gradient */}
+      <text
+        x="342"
+        y="85"
+        fontFamily="system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif"
+        fontSize="96"
+        fontWeight="900"
+        letterSpacing="-3.5"
+        fill="url(#cf-wordmark-blue)"
+      >
+        rge
       </text>
     </svg>
   );
 };
 
 /**
- * ChatForge Combined Logo (Icon + Wordmark): 520x150
+ * ChatForge Combined Logo (Icon + Wordmark): 680x150
  */
 export const ChatForgeLogo: React.FC<{
   className?: string;
   textColor?: string;
-}> = ({ className = 'h-10 w-auto', textColor = '#F4F4F5' }) => {
+}> = ({ className = 'h-10 w-auto' }) => {
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 520 150"
-      className={`shrink-0 ${className}`}
-      role="img"
-      aria-label="ChatForge Logo"
-    >
-      <title>ChatForge logo</title>
-      <desc>A chat bubble containing a forge-style lightning spark, followed by the ChatForge wordmark.</desc>
-      <defs>
-        <linearGradient id="cf-combo-bubble" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#2563EB" />
-          <stop offset="100%" stopColor="#4F46E5" />
-        </linearGradient>
-        <linearGradient id="cf-combo-spark" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FF8A00" />
-          <stop offset="100%" stopColor="#EF4444" />
-        </linearGradient>
-      </defs>
-      {/* Icon */}
-      <g transform="translate(12 10)">
-        {/* speech bubble */}
-        <path
-          d="M56 8h60c27.6 0 50 22.4 50 50v25c0 27.6-22.4 50-50 50H82l-25 17v-17H56c-27.6 0-50-22.4-50-50V58C6 30.4 28.4 8 56 8Z"
-          fill="url(#cf-combo-bubble)"
-        />
-        {/* subtle inner chat highlight */}
-        <path
-          d="M31 34c9-10 22-16 37-16h44c10 0 20 3 28 8-9-13-24-21-41-21H56c-18 0-33 7-42 19 5-2 11-3 17-3Z"
-          fill="#fff"
-          opacity="0.14"
-        />
-        {/* forge spark / lightning */}
-        <path
-          d="M94 20 54 82h29l-8 38 43-62H90Z"
-          fill="url(#cf-combo-spark)"
-          stroke="#fff"
-          strokeWidth="5"
-          strokeLinejoin="round"
-        />
-      </g>
-      {/* Wordmark */}
-      <g
-        fontFamily="Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
-        fontSize="54"
-        fontWeight="750"
-        letterSpacing="-2"
-      >
-        <text x="190" y="91" fill={textColor}>
-          Chat
-        </text>
-        <text x="319" y="91" fill="#4F46E5">
-          Forge
-        </text>
-      </g>
-    </svg>
+    <div className={`inline-flex items-center gap-3 shrink-0 ${className}`}>
+      <ChatForgeIcon className="h-full w-auto aspect-square drop-shadow-md" />
+      <ChatForgeWordmark className="h-full w-auto" />
+    </div>
   );
 };

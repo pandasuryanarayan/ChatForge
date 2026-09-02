@@ -63,8 +63,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
     setEditingId(null);
   };
 
-  // Filter conversations
-  const filtered = conversations.filter((c) => {
+  // Filter conversations with messages (only show once conversation actually starts)
+  const activeConversationsWithMessages = conversations.filter(
+    (c) => (c.messages && c.messages.length > 0) || c.id === activeConversationId && c.messages?.length > 0
+  );
+
+  // Filter conversations by search
+  const filtered = activeConversationsWithMessages.filter((c) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -249,7 +254,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
         {/* Conversation List */}
         <div className="flex-1 px-3 space-y-1 overflow-y-auto">
-          {conversations.length === 0 ? (
+          {filtered.length === 0 ? (
             <div className="text-center py-8 text-xs text-zinc-500">
               No conversations yet
             </div>
@@ -305,7 +310,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
 
         {/* Bottom Bento Actions Bar */}
-        <div className="p-4 border-t border-zinc-800 mt-auto space-y-2 bg-zinc-950/40">
+        <div className="p-3 border-t border-zinc-800 mt-auto space-y-2 bg-zinc-950/40">
           <button
             id="sidebar-api-keys-btn"
             onClick={onOpenProviderModal}

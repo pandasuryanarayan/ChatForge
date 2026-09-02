@@ -107,8 +107,14 @@ When you first open **ChatForge**, click on the **Key Icon** in the navigation b
 
 ## 🛡️ Security & Privacy
 
-- All API calls are executed directly with your credentials.
-- No telemetry, third-party analytics trackers, or user profiling.
-- Keys are never written to disk or sent to any intermediary server.
+- **🔐 End-to-End In-Transit Encryption**: API keys in all chat streaming payloads, model discovery calls, and key validation tests are automatically encrypted using a nonce-salted transit cipher (`cf_enc_v1`), ensuring keys are never transmitted in cleartext.
+- **💼 Encrypted Browser Vault**: API keys stored in `localStorage` are automatically encrypted at rest (`cf_vault_v1`) to protect against browser inspection and rogue script snooping.
+- **⚡ Session-Only Memory Mode**: Toggle session-only keys to store credentials exclusively in volatile memory that vanish automatically when the browser tab closes.
+- **🚫 Zero Server-Side Persistence**: Keys are never written to server disk or database; server proxies decrypt solely in volatile memory during the active request to upstream providers.
+- **No telemetry, third-party trackers, or profiling**: 100% private, client-first architecture.
 
 ---
+
+## 📄 License
+
+MIT License. Free to use, modify, and distribute.

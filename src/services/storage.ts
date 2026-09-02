@@ -7,6 +7,7 @@ import {
   ProviderId,
 } from '../types';
 import { DEFAULT_SYSTEM_PROMPTS } from '../constants/providers';
+import { encryptForStorage, decryptFromStorage } from '../utils/security';
 
 const KEYS_STORAGE_KEY = 'chatforge_credentials_v1';
 const CONVERSATIONS_STORAGE_KEY = 'chatforge_conversations_v1';
@@ -40,7 +41,16 @@ export function loadCredentials(): Record<ProviderId, ProviderCredential> {
   try {
     const raw = localStorage.getItem(KEYS_STORAGE_KEY);
     if (raw) {
-      stored = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      for (const [provider, cred] of Object.entries(parsed)) {
+        if (cred && typeof cred === 'object') {
+          const typedCred = cred as ProviderCredential;
+          stored[provider] = {
+            ...typedCred,
+            apiKey: decryptFromStorage(typedCred.apiKey || ''),
+          };
+        }
+      }
     }
   } catch (e) {
     console.error('Failed to load credentials from localStorage', e);
@@ -80,7 +90,10 @@ export function saveCredential(
     try {
       const raw = localStorage.getItem(KEYS_STORAGE_KEY);
       const stored = raw ? JSON.parse(raw) : {};
-      stored[providerId] = credential;
+      stored[providerId] = {
+        ...credential,
+        apiKey: encryptForStorage(credential.apiKey || ''),
+      };
       localStorage.setItem(KEYS_STORAGE_KEY, JSON.stringify(stored));
     } catch (e) {
       console.error('Failed to save credential to localStorage', e);

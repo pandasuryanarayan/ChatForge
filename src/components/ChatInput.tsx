@@ -45,7 +45,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Auto-resize textarea
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const checkViewport = () => {
+      setIsDesktop(window.innerWidth >= 1024);
+    };
+    checkViewport();
+    window.addEventListener('resize', checkViewport);
+    return () => window.removeEventListener('resize', checkViewport);
+  }, []);
+
+  const placeholderText = isDesktop
+    ? `Message ${activeModelInfo?.name || 'AI'}... (Shift+Enter for newline)`
+    : `Message ${activeModelInfo?.name || 'AI'}...`;
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -173,16 +186,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           value={content}
           onChange={(e) => setContent(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={`Message ${activeModelInfo?.name || 'AI'}... (Shift+Enter for newline)`}
+          placeholder={placeholderText}
           rows={1}
           disabled={disabled}
           className="w-full bg-transparent border-0 focus:outline-none text-sm text-zinc-200 placeholder-zinc-600 resize-none min-h-[44px] max-h-48 leading-relaxed"
         />
 
         {/* Bottom Toolbar inside input container */}
-        <div className="flex items-center justify-between pt-2 border-t border-zinc-800/60 mt-1">
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-800/60 mt-1 min-w-0">
           {/* Left Tools: Attachments, Quick Model/Params */}
-          <div className="flex items-center gap-1.5 text-zinc-400">
+          <div className="flex items-center gap-1.5 text-zinc-400 min-w-0 overflow-hidden">
             <input
               type="file"
               ref={fileInputRef}
@@ -196,7 +209,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               id="attach-image-btn"
               onClick={() => fileInputRef.current?.click()}
               disabled={disabled}
-              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition"
+              className="p-1.5 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 rounded-lg transition shrink-0"
               title={isVisionSupported ? 'Attach Image (Vision supported)' : 'Attach image'}
             >
               <Paperclip className="w-4 h-4" />
@@ -207,7 +220,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               id="chat-input-model-selector-btn"
               type="button"
               onClick={onOpenModelSelector}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[11px] transition border whitespace-nowrap min-w-0 max-w-[180px] xs:max-w-[240px] sm:max-w-xs overflow-hidden cursor-pointer ${
+              className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs sm:text-[11px] transition border whitespace-nowrap min-w-0 max-w-[150px] xs:max-w-[200px] sm:max-w-xs overflow-hidden cursor-pointer shrink ${
                 disabled
                   ? 'bg-zinc-900 text-amber-400 border-zinc-700 hover:bg-zinc-800'
                   : 'bg-zinc-800/90 hover:bg-zinc-750 text-zinc-100 border-zinc-700'
@@ -220,7 +233,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             >
               {disabled ? (
                 <>
-                  <Key className="w-3 h-3 text-amber-400 shrink-0" />
+                  <Key className="w-3.5 h-3.5 text-amber-400 shrink-0" />
                   <span className="text-amber-400 font-semibold truncate">Select Provider</span>
                 </>
               ) : (
@@ -229,7 +242,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                     {provider.id === 'custom' ? 'Custom' : provider.name.split(' ')[0]}
                   </span>
                   <span className="text-zinc-500 shrink-0">/</span>
-                  <span className="model-name-text truncate max-w-[100px] xs:max-w-[140px] sm:max-w-[180px] font-semibold text-zinc-100">
+                  <span className="model-name-text truncate max-w-[80px] xs:max-w-[120px] sm:max-w-[180px] font-semibold text-zinc-100">
                     {activeModelInfo?.name || activeModelId}
                   </span>
                 </>
@@ -241,25 +254,27 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               type="button"
               id="chat-input-parameters-btn"
               onClick={onOpenParameters}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] font-medium transition cursor-pointer shrink-0 bg-zinc-800/90 hover:bg-zinc-750 text-zinc-300 border-zinc-700 shadow-xs"
+              className="flex items-center gap-1 sm:gap-1.5 px-1.5 sm:px-2 py-1 rounded-md border text-[11px] font-medium transition cursor-pointer shrink-0 bg-zinc-800/90 hover:bg-zinc-750 text-zinc-300 border-zinc-700 shadow-xs"
               title="Inference Parameters (Temperature, Max Tokens, System Prompt)"
             >
               <Sliders className="w-3 h-3 text-blue-400 shrink-0" />
-              <span className="text-zinc-300 font-medium">Params</span>
+              <span className="text-zinc-300 font-medium hidden xs:inline">Params</span>
             </button>
           </div>
 
           {/* Right Tool: Stop or Send Button */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             {isStreaming ? (
               <button
                 type="button"
                 id="stop-stream-btn"
                 onClick={onStopStreaming}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold transition shadow-sm"
+                className="flex items-center justify-center gap-1.5 p-2 sm:px-3 sm:py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold transition shadow-sm cursor-pointer shrink-0"
+                title="Stop generation"
+                aria-label="Stop generation"
               >
-                <Square className="w-3.5 h-3.5 fill-current" />
-                <span>Stop</span>
+                <Square className="w-3.5 h-3.5 sm:w-3.5 sm:h-3.5 fill-current" />
+                <span className="hidden sm:inline">Stop</span>
               </button>
             ) : (
               <button
@@ -267,12 +282,13 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 id="send-message-btn"
                 onClick={handleSubmit}
                 disabled={(!content.trim() && attachments.length === 0) || disabled}
-                className={`p-2 rounded-lg transition-colors flex items-center justify-center ${
+                className={`p-2 rounded-lg transition-colors flex items-center justify-center shrink-0 cursor-pointer ${
                   content.trim() || attachments.length > 0
                     ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-600/30'
                     : 'bg-zinc-800 text-zinc-500 cursor-not-allowed'
                 }`}
                 title="Send message (Enter)"
+                aria-label="Send message"
               >
                 <Send className="w-4 h-4" />
               </button>

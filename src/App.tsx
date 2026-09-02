@@ -36,6 +36,7 @@ import { SettingsModal } from './components/SettingsModal';
 import { OnboardingView } from './components/OnboardingView';
 import { ChatForgeIcon } from './components/ChatForgeLogo';
 import { parseApiError } from './utils/errorParser';
+import { enrichModelInfo } from './utils/modelSpecs';
 import { AlertCircle, ArrowDown, Sparkles, MessageSquare, Bot } from 'lucide-react';
 
 export default function App() {
@@ -59,13 +60,13 @@ export default function App() {
     const saved = loadAvailableModels();
     if (saved.length > 0) {
       // Only keep saved models for configured providers and filter out deprecated models
-      const valid = saved.filter((m) => isConfigured(m.provider) && !isDeprecated(m.id));
+      const valid = saved.filter((m) => isConfigured(m.provider) && !isDeprecated(m.id)).map(enrichModelInfo);
       if (valid.length > 0) return valid;
     }
 
     const configured = PROVIDERS.filter((p) => isConfigured(p.id));
     if (configured.length > 0) {
-      return configured.flatMap((p) => p.defaultModels);
+      return configured.flatMap((p) => p.defaultModels).map(enrichModelInfo);
     }
     return [];
   });
@@ -209,9 +210,44 @@ export default function App() {
 
   const activeProvider = activeConversation?.providerId || settings.activeProvider || 'google';
   const activeModelId = activeConversation?.modelId || settings.activeModel || 'gemini-3.7-flash';
-  const activeModelInfo = availableModels.find(
+  const rawModelInfo = availableModels.find(
     (m) => m.id === activeModelId && m.provider === activeProvider
   ) || availableModels.find((m) => m.id === activeModelId);
+  const activeModelInfo = rawModelInfo ? enrichModelInfo(rawModelInfo) : undefined;
+
+  // Resolve model information accurately for any specific message
+  const getModelInfoForMessage = (message: Message, conv: Conversation): ModelInfo | undefined => {
+    if (message.role === 'user') return undefined;
+
+    const targetProviderId = message.providerId || conv.providerId || 'google';
+    const targetModelId = message.modelId || conv.modelId || 'gemini-3.7-flash';
+
+    // 1. Check loaded availableModels
+    const foundInAvailable = availableModels.find(
+      (m) => m.id === targetModelId && (!targetProviderId || m.provider === targetProviderId)
+    ) || availableModels.find((m) => m.id === targetModelId);
+
+    if (foundInAvailable) {
+      return enrichModelInfo(foundInAvailable);
+    }
+
+    // 2. Check static default models for the provider
+    const providerObj = PROVIDERS.find((p) => p.id === targetProviderId);
+    const foundInDefaults =
+      providerObj?.defaultModels.find((m) => m.id === targetModelId) ||
+      PROVIDERS.flatMap((p) => p.defaultModels).find((m) => m.id === targetModelId);
+
+    if (foundInDefaults) {
+      return enrichModelInfo(foundInDefaults);
+    }
+
+    // 3. Fallback dynamically enriched ModelInfo
+    return enrichModelInfo({
+      id: targetModelId,
+      name: targetModelId,
+      provider: targetProviderId,
+    });
+  };
 
   // Check if active provider has a valid key configured
   const currentCred = credentials[activeProvider];
@@ -225,6 +261,11 @@ export default function App() {
   // Conversation Actions
   const handleNewConversation = () => {
     if (isStreaming) handleStopStreaming();
+    if (activeConversation && activeConversation.messages.length === 0) {
+      // Already on a new empty conversation, no need to create a duplicate
+      setErrorMessage(null);
+      return;
+    }
     const newConv = createNewConversation(
       settings.activeProvider,
       settings.activeModel,
@@ -338,6 +379,9 @@ export default function App() {
     }
 
     const now = Date.now();
+    const currentProvider = activeConversation.providerId;
+    const currentModel = activeConversation.modelId;
+
     const userMessage: Message = {
       id: `msg_${now}_${Math.random().toString(36).substring(2, 7)}`,
       role: 'user',
@@ -345,6 +389,8 @@ export default function App() {
       attachments: attachments && attachments.length > 0 ? attachments : undefined,
       createdAt: now,
       timestamp: now,
+      providerId: currentProvider,
+      modelId: currentModel,
     };
 
     const assistantPlaceholderId = `msg_${now + 1}_${Math.random().toString(36).substring(2, 7)}`;
@@ -354,6 +400,8 @@ export default function App() {
       content: '',
       createdAt: now + 1,
       timestamp: now + 1,
+      providerId: currentProvider,
+      modelId: currentModel,
     };
 
     // Calculate auto title if this is the first message in conversation
@@ -444,6 +492,9 @@ export default function App() {
                       reasoningContent: fullReasoning,
                       tokens: usage,
                       estimatedCost: cost,
+                      durationMs,
+                      providerId: currentProvider,
+                      modelId: currentModel,
                     };
                   }
                   return m;
@@ -466,6 +517,8 @@ export default function App() {
                       ...m,
                       isError: true,
                       errorDetails: parsedError,
+                      providerId: currentProvider,
+                      modelId: currentModel,
                     };
                   }
                   return m;
@@ -491,6 +544,8 @@ export default function App() {
                   ...m,
                   isError: true,
                   errorDetails: parsedError,
+                  providerId: currentProvider,
+                  modelId: currentModel,
                 };
               }
               return m;
@@ -645,6 +700,8 @@ export default function App() {
                         idx === messagesCount - 1 &&
                         message.role === 'assistant';
 
+                      const messageModelInfo = getModelInfoForMessage(message, activeConversation);
+
                       return (
                         <ChatMessage
                           key={message.id}
@@ -653,7 +710,7 @@ export default function App() {
                           onRegenerate={isLastAssistantMessage ? handleRegenerate : undefined}
                           onOpenModelSelector={() => setIsModelSelectorOpen(true)}
                           onOpenProviderModal={() => setIsProviderModalOpen(true)}
-                          modelInfo={activeModelInfo}
+                          modelInfo={messageModelInfo || activeModelInfo}
                         />
                       );
                     })}

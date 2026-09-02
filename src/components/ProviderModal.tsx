@@ -163,12 +163,16 @@ export const ProviderModal: React.FC<ProviderModalProps> = ({
             <div className="min-w-0">
               <h2 className="text-sm sm:text-base font-semibold text-zinc-100 flex items-center gap-2 truncate">
                 <span>API Keys & Providers</span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-normal shrink-0">
-                  Client-Side
+                <span
+                  className="text-[10px] p-1 sm:px-2 sm:py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-normal flex items-center gap-1 shrink-0"
+                  title="E2E Encrypted Transit"
+                >
+                  <Shield className="w-3 h-3 shrink-0" />
+                  <span className="hidden sm:inline">E2E Encrypted Transit</span>
                 </span>
               </h2>
               <p className="text-[11px] sm:text-xs text-zinc-400 truncate hidden sm:block">
-                Keys are stored locally in your browser and dispatched directly to provider APIs.
+                Keys are stored encrypted in your local browser vault and protected by in-transit encryption.
               </p>
             </div>
           </div>

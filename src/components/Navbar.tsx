@@ -7,6 +7,8 @@ import {
   Settings,
   Brain,
   Eye,
+  Video,
+  Image as ImageIcon,
   Plus,
   PanelRight,
   Shield,
@@ -74,7 +76,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           <ChatForgeIcon className="w-7 h-7 sm:w-8 sm:h-8 drop-shadow-sm" />
           <div className="hidden md:flex items-center gap-1.5">
             <ChatForgeWordmark className="h-5 w-auto" textColor="#F4F4F5" />
-            <span className="text-zinc-500 font-normal text-[11px] ml-1 font-mono">v1.0</span>
           </div>
         </div>
 
@@ -85,7 +86,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           id="navbar-model-selector-btn"
           onClick={onOpenModelSelector}
-          className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-2.5 py-1 rounded-lg border text-left transition min-w-0 max-w-[130px] xs:max-w-[180px] sm:max-w-xs md:max-w-md group shadow-sm shrink cursor-pointer bg-zinc-900/90 hover:bg-zinc-800 border-zinc-750 text-yellow-400`}
+          className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3.5 md:px-4 py-1.5 rounded-lg border text-left transition min-w-0 max-w-[140px] xs:max-w-[200px] sm:max-w-[280px] md:max-w-sm lg:max-w-md group shadow-sm shrink cursor-pointer bg-zinc-900/90 hover:bg-zinc-800 border-zinc-750 text-yellow-400`}
           title={hasKey ? `${provider.name} - ${activeModelInfo?.name || activeModelId}` : 'No provider selected - Click to select provider & enter API key'}
         >
           {hasKey ? (
@@ -100,7 +101,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <Key className="w-4 h-4 text-yellow-400 shrink-0" />
           )}
           <div className="min-w-0 flex items-center gap-1.5 overflow-hidden">
-            <span className="text-xs font-semibold truncate whitespace-nowrap text-yellow-400 model-name-text">
+            <span className="text-xs sm:text-[13px] font-semibold truncate whitespace-nowrap text-yellow-400 model-name-text">
               {hasKey ? (activeModelInfo?.name || activeModelId) : 'Select Provider'}
             </span>
             {hasKey && (
@@ -113,10 +114,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 Setup Key
               </span>
             )}
-            {hasKey && activeModelInfo?.isReasoning && (
+            {hasKey && activeModelInfo?.isVideoGen && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded bg-amber-500/10 text-amber-300 border border-amber-500/20 font-mono shrink-0">
+                <Video className="w-3 h-3 text-amber-400" />
+                Video Gen
+              </span>
+            )}
+            {hasKey && activeModelInfo?.isImageGen && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-[10px] px-1.5 py-0.2 rounded bg-pink-500/10 text-pink-300 border border-pink-500/20 font-mono shrink-0">
+                <ImageIcon className="w-3 h-3 text-pink-400" />
+                Image Gen
+              </span>
+            )}
+            {hasKey && activeModelInfo?.isReasoning && !activeModelInfo?.isVideoGen && !activeModelInfo?.isImageGen && (
               <Brain className="hidden sm:inline-block w-3 h-3 text-yellow-400 shrink-0" />
             )}
-            {hasKey && activeModelInfo?.isVision && (
+            {hasKey && activeModelInfo?.isVision && !activeModelInfo?.isVideoGen && !activeModelInfo?.isImageGen && (
               <Eye className="hidden sm:inline-block w-3 h-3 text-yellow-300 shrink-0" />
             )}
           </div>
@@ -124,16 +137,16 @@ export const Navbar: React.FC<NavbarProps> = ({
       </div>
 
       {/* Right: Active Provider Pill + Actions */}
-      <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
         {/* Active Provider Status Pill */}
         <button
           id="navbar-provider-status-pill"
           onClick={onOpenProviderModal}
-          className="flex items-center gap-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded-full px-2 sm:px-3 py-1 text-xs transition cursor-pointer shrink-0 text-yellow-400"
+          className="flex items-center gap-1 sm:gap-1.5 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded-full px-1.5 sm:px-2 md:px-2.5 py-0.5 sm:py-1 text-xs transition cursor-pointer shrink-0 text-yellow-400"
           title={hasKey ? `${provider.name} Connected - Click to manage` : 'No provider selected - Click to configure provider'}
         >
           {hasKey ? (
-            <div className="w-5 h-5 min-w-[20px] min-h-[20px] max-w-[20px] max-h-[20px] rounded-md overflow-hidden flex items-center justify-center shrink-0">
+            <div className="w-4 h-4 sm:w-4.5 sm:h-4.5 min-w-[16px] min-h-[16px] max-w-[18px] max-h-[18px] rounded-md overflow-hidden flex items-center justify-center shrink-0">
               <img
                 src={PROVIDER_LOGOS[activeProviderId] || PROVIDER_LOGOS.custom}
                 alt={provider.name}
@@ -141,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               />
             </div>
           ) : (
-            <Key className="w-4 h-4 text-yellow-400 shrink-0" />
+            <Key className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-400 shrink-0" />
           )}
           <div
             className={`w-1.5 h-1.5 rounded-full shrink-0 ${
@@ -150,8 +163,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                 : 'bg-yellow-400 shadow-[0_0_6px_rgba(250,204,21,0.8)] animate-pulse'
             }`}
           />
-          <span className="text-yellow-400 text-[11px] font-medium hidden sm:inline whitespace-nowrap">
-            {hasKey ? `${provider.name} Active` : 'Select Provider'}
+          <span className="text-yellow-400 text-[10px] sm:text-[11px] font-medium hidden sm:inline whitespace-nowrap">
+            {hasKey ? (provider.id === 'custom' ? 'Custom' : provider.name.split(' ')[0]) : 'Provider'}
           </span>
         </button>
 

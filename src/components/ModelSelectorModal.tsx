@@ -6,6 +6,8 @@ import {
   Zap,
   Brain,
   Eye,
+  Video,
+  Image as ImageIcon,
   RefreshCw,
   Sliders,
   X,
@@ -22,6 +24,7 @@ import {
 import { ModelInfo, ProviderCredential, ProviderId } from '../types';
 import { PROVIDERS } from '../constants/providers';
 import { fetchModelsFromProvider } from '../services/api';
+import { formatContextWindow, enrichModelInfo } from '../utils/modelSpecs';
 import { ProviderIcon } from './ProviderIcon';
 
 interface ModelSelectorModalProps {
@@ -53,7 +56,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterProvider, setFilterProvider] = useState<string>('all');
-  const [filterTag, setFilterTag] = useState<'all' | 'reasoning' | 'vision' | 'pinned'>('all');
+  const [filterTag, setFilterTag] = useState<'all' | 'reasoning' | 'vision' | 'image' | 'video' | 'pinned'>('all');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [fetchStatusMessage, setFetchStatusMessage] = useState<string | null>(null);
   const [expandedModelIds, setExpandedModelIds] = useState<Record<string, boolean>>({});
@@ -93,7 +96,7 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
   // ONLY real fetched models in availableModels are displayed and counted.
   // If no models have been fetched for a provider yet, count is 0 and empty state prompts fetching/key setup.
   const getModelsForProvider = (pId: ProviderId): ModelInfo[] => {
-    return availableModels.filter((m) => m.provider === pId);
+    return availableModels.filter((m) => m.provider === pId).map(enrichModelInfo);
   };
 
   // Total count of all fetched models across all providers (always preserved regardless of which tab is active)
@@ -101,20 +104,22 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
     ? availableModels.filter((m) => isProviderConfigured(m.provider)).length
     : availableModels.length;
 
-  const allModels: ModelInfo[] = [];
+  const rawModels: ModelInfo[] = [];
 
   if (filterProvider === 'all') {
     if (hasConfiguredKeys) {
       for (const p of configuredProviders) {
-        allModels.push(...getModelsForProvider(p.id));
+        rawModels.push(...getModelsForProvider(p.id));
       }
     } else {
-      allModels.push(...availableModels);
+      rawModels.push(...availableModels.map(enrichModelInfo));
     }
   } else {
     const targetProvId = filterProvider as ProviderId;
-    allModels.push(...getModelsForProvider(targetProvId));
+    rawModels.push(...getModelsForProvider(targetProvId));
   }
+
+  const allModels = rawModels.map(enrichModelInfo);
 
   const handleRefreshModels = async () => {
     setIsRefreshing(true);
@@ -138,9 +143,10 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
           try {
             const fetched = await fetchModelsFromProvider(p.id, cred);
             if (fetched && fetched.length > 0) {
-              updatedModels = updatedModels.filter((m) => m.provider !== p.id).concat(fetched);
-              totalFetched += fetched.length;
-              breakdown.push(`${p.name} (${fetched.length})`);
+              const enriched = fetched.map(enrichModelInfo);
+              updatedModels = updatedModels.filter((m) => m.provider !== p.id).concat(enriched);
+              totalFetched += enriched.length;
+              breakdown.push(`${p.name} (${enriched.length})`);
             }
           } catch (err) {
             console.warn(`Failed fetching models for ${p.id}:`, err);
@@ -168,16 +174,17 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
         const cred = credentials[targetProvider];
         const fetched = await fetchModelsFromProvider(targetProvider, cred);
         if (fetched && fetched.length > 0) {
-          const updated = availableModels.filter((m) => m.provider !== targetProvider).concat(fetched);
+          const enriched = fetched.map(enrichModelInfo);
+          const updated = availableModels.filter((m) => m.provider !== targetProvider).concat(enriched);
           onUpdateAvailableModels(updated);
           setFetchStatusMessage(
-            `Successfully fetched and verified ${fetched.length} live models for ${targetConfig?.name || targetProvider}.`
+            `Successfully fetched and verified ${enriched.length} live models for ${targetConfig?.name || targetProvider}.`
           );
 
           // If current model is not in fetched models, select the first valid model
-          const modelStillExists = fetched.some((m) => m.id === activeModelId);
+          const modelStillExists = enriched.some((m) => m.id === activeModelId);
           if (!modelStillExists && targetProvider === activeProvider) {
-            onSelectModel(targetProvider, fetched[0].id);
+            onSelectModel(targetProvider, enriched[0].id);
           }
         } else {
           setFetchStatusMessage(`No models returned by API for ${targetConfig?.name || targetProvider}.`);
@@ -198,6 +205,8 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
 
     if (filterTag === 'reasoning' && !model.isReasoning) return false;
     if (filterTag === 'vision' && !model.isVision) return false;
+    if (filterTag === 'image' && !model.isImageGen) return false;
+    if (filterTag === 'video' && !model.isVideoGen) return false;
     if (filterTag === 'pinned' && !pinnedModels.includes(model.id)) return false;
 
     if (searchQuery.trim()) {
@@ -396,6 +405,26 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                 <Eye className="w-3 h-3 text-emerald-400" />
                 <span>Vision</span>
               </button>
+              <button
+                id="filter-tag-image"
+                onClick={() => setFilterTag('image')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg transition ${
+                  filterTag === 'image' ? 'bg-pink-500/20 text-pink-300' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <ImageIcon className="w-3 h-3 text-pink-400" />
+                <span>Image Gen</span>
+              </button>
+              <button
+                id="filter-tag-video"
+                onClick={() => setFilterTag('video')}
+                className={`flex items-center gap-1 px-2 py-0.5 rounded-lg transition ${
+                  filterTag === 'video' ? 'bg-amber-500/20 text-amber-300' : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <Video className="w-3 h-3 text-amber-400" />
+                <span>Video Gen</span>
+              </button>
             </div>
           </div>
         </div>
@@ -552,13 +581,25 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                           <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-800 text-zinc-400 font-mono">
                             {model.id}
                           </span>
-                          {model.isReasoning && (
+                          {model.isVideoGen && (
+                            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                              <Video className="w-3 h-3" />
+                              <span>Video Gen</span>
+                            </span>
+                          )}
+                          {model.isImageGen && (
+                            <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-pink-500/10 text-pink-400 border border-pink-500/20">
+                              <ImageIcon className="w-3 h-3" />
+                              <span>Image Gen</span>
+                            </span>
+                          )}
+                          {model.isReasoning && !model.isVideoGen && !model.isImageGen && (
                             <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20">
                               <Brain className="w-3 h-3" />
                               <span>Reasoning</span>
                             </span>
                           )}
-                          {model.isVision && (
+                          {model.isVision && !model.isVideoGen && !model.isImageGen && (
                             <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                               <Eye className="w-3 h-3" />
                               <span>Vision</span>
@@ -576,7 +617,14 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                     <div className="flex items-center gap-2.5 shrink-0 text-right">
                       {/* Compact Quick Stats */}
                       <div className="hidden sm:block">
-                        {model.inputPrice !== undefined && model.inputPrice > 0 ? (
+                        {model.perUnitCost !== undefined && model.perUnitCost > 0 ? (
+                          <div className="text-xs text-amber-300 font-mono">
+                            ${model.perUnitCost.toFixed(2)}
+                            <span className="text-[10px] text-zinc-400 ml-1">
+                              {model.perUnitLabel || (model.isVideoGen ? '/ video' : '/ image')}
+                            </span>
+                          </div>
+                        ) : model.inputPrice !== undefined && model.inputPrice > 0 ? (
                           <div className="text-xs text-zinc-300 font-mono">
                             ${model.inputPrice.toFixed(2)} / ${model.outputPrice?.toFixed(2)}
                             <span className="text-[10px] text-zinc-400 ml-1">per 1M</span>
@@ -584,11 +632,19 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         ) : (
                           <div className="text-xs text-emerald-400 font-mono">Free / Local</div>
                         )}
-                        {model.contextWindow && (
-                          <div className="text-[10px] text-zinc-400 font-mono">
-                            {(model.contextWindow / 1000).toFixed(0)}k context
+                        {model.isVideoGen ? (
+                          <div className="text-[10px] text-amber-400/90 font-mono">
+                            Video Synthesis
                           </div>
-                        )}
+                        ) : model.isImageGen ? (
+                          <div className="text-[10px] text-pink-400/90 font-mono">
+                            Image Synthesis
+                          </div>
+                        ) : model.contextWindow ? (
+                          <div className="text-[10px] text-zinc-400 font-mono">
+                            {formatContextWindow(model.contextWindow)} context
+                          </div>
+                        ) : null}
                       </div>
 
                       {isSelected && (
@@ -630,9 +686,13 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                           Full Model Overview
                         </span>
                         {model.description ||
-                          `High-performance language model provided by ${
-                            providerConfig?.name || model.provider
-                          }, optimized for conversational dialogue, structured outputs, code generation, and multi-turn workflows.`}
+                          (model.isVideoGen
+                            ? `High-definition generative video synthesis model by ${providerConfig?.name || model.provider}.`
+                            : model.isImageGen
+                            ? `High-resolution image generation model by ${providerConfig?.name || model.provider}.`
+                            : `High-performance language model provided by ${
+                                providerConfig?.name || model.provider
+                              }, optimized for conversational dialogue, structured outputs, code generation, and multi-turn workflows.`)}
                       </div>
 
                       {/* Detailed Specs Grid */}
@@ -641,9 +701,25 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         <div className="bg-zinc-900/80 p-2.5 rounded-lg border border-zinc-800/80 flex flex-col justify-between">
                           <div className="flex items-center gap-1.5 text-zinc-400 text-[11px] font-medium mb-1">
                             <DollarSign className="w-3.5 h-3.5 text-amber-400" />
-                            <span>Pricing (per 1M tokens)</span>
+                            <span>
+                              {model.isVideoGen || model.isImageGen
+                                ? 'Generation Pricing'
+                                : 'Pricing (per 1M tokens)'}
+                            </span>
                           </div>
-                          {model.inputPrice !== undefined && model.inputPrice > 0 ? (
+                          {model.perUnitCost !== undefined && model.perUnitCost > 0 ? (
+                            <div className="space-y-0.5">
+                              <div className="flex justify-between text-zinc-200 font-mono">
+                                <span className="text-zinc-400 text-[11px]">Cost:</span>
+                                <span className="font-semibold text-amber-300">
+                                  ${model.perUnitCost.toFixed(2)}{' '}
+                                  <span className="text-[10px] text-zinc-400">
+                                    {model.perUnitLabel || (model.isVideoGen ? '/ video' : '/ image')}
+                                  </span>
+                                </span>
+                              </div>
+                            </div>
+                          ) : model.inputPrice !== undefined && model.inputPrice > 0 ? (
                             <div className="space-y-0.5">
                               <div className="flex justify-between text-zinc-200 font-mono">
                                 <span className="text-zinc-400 text-[11px]">Prompt / In:</span>
@@ -665,19 +741,45 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                         <div className="bg-zinc-900/80 p-2.5 rounded-lg border border-zinc-800/80 flex flex-col justify-between">
                           <div className="flex items-center gap-1.5 text-zinc-400 text-[11px] font-medium mb-1">
                             <Layers className="w-3.5 h-3.5 text-blue-400" />
-                            <span>Context Window</span>
+                            <span>
+                              {model.isVideoGen || model.isImageGen
+                                ? 'Model Architecture'
+                                : 'Context Window'}
+                            </span>
                           </div>
                           <div>
-                            <div className="text-zinc-100 font-semibold text-sm font-mono">
-                              {model.contextWindow
-                                ? `${model.contextWindow.toLocaleString()} tokens`
-                                : 'Standard Window'}
-                            </div>
-                            <div className="text-[10px] text-zinc-400 mt-0.5">
-                              {model.contextWindow
-                                ? `~${(model.contextWindow / 1000).toFixed(0)}k context capacity`
-                                : 'Optimized multi-turn window'}
-                            </div>
+                            {model.isVideoGen ? (
+                              <>
+                                <div className="text-amber-300 font-semibold text-sm font-mono">
+                                  Video Synthesis
+                                </div>
+                                <div className="text-[10px] text-zinc-400 mt-0.5">
+                                  Generates video files (no token context window)
+                                </div>
+                              </>
+                            ) : model.isImageGen ? (
+                              <>
+                                <div className="text-pink-300 font-semibold text-sm font-mono">
+                                  Image Synthesis
+                                </div>
+                                <div className="text-[10px] text-zinc-400 mt-0.5">
+                                  Generates image files (no token context window)
+                                </div>
+                              </>
+                            ) : (
+                              <>
+                                <div className="text-zinc-100 font-semibold text-sm font-mono">
+                                  {model.contextWindow
+                                    ? `${model.contextWindow.toLocaleString()} tokens`
+                                    : 'Standard Window'}
+                                </div>
+                                <div className="text-[10px] text-zinc-400 mt-0.5">
+                                  {model.contextWindow
+                                    ? `${formatContextWindow(model.contextWindow)} verified context window`
+                                    : 'Optimized multi-turn window'}
+                                </div>
+                              </>
+                            )}
                           </div>
                         </div>
 
@@ -688,22 +790,44 @@ export const ModelSelectorModal: React.FC<ModelSelectorModalProps> = ({
                             <span>Supported Capabilities</span>
                           </div>
                           <div className="flex flex-wrap gap-1.5 mt-1">
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                              Chat & Stream
-                            </span>
-                            {model.isReasoning && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-700/40">
-                                Reasoning / CoT
-                              </span>
+                            {model.isVideoGen ? (
+                              <>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-900/40 text-amber-300 border border-amber-700/40">
+                                  Video Generation
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                                  Prompt-to-Video
+                                </span>
+                              </>
+                            ) : model.isImageGen ? (
+                              <>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-pink-900/40 text-pink-300 border border-pink-700/40">
+                                  Image Generation
+                                </span>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                                  Text-to-Image
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                                  Chat & Stream
+                                </span>
+                                {model.isReasoning && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-700/40">
+                                    Reasoning / CoT
+                                  </span>
+                                )}
+                                {model.isVision && (
+                                  <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40">
+                                    Multimodal / Vision
+                                  </span>
+                                )}
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
+                                  Tool Calling
+                                </span>
+                              </>
                             )}
-                            {model.isVision && (
-                              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-900/40 text-emerald-300 border border-emerald-700/40">
-                                Multimodal / Vision
-                              </span>
-                            )}
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-300">
-                              Tool Calling
-                            </span>
                           </div>
                         </div>
                       </div>
