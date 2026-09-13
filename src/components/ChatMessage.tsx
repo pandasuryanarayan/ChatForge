@@ -20,6 +20,7 @@ import {
   ExternalLink,
   Code2,
   Terminal,
+  Play,
 } from 'lucide-react';
 import { Message, ModelInfo, ProviderId } from '../types';
 import { ProviderIcon } from './ProviderIcon';
@@ -32,6 +33,8 @@ interface ChatMessageProps {
   onOpenProviderModal?: () => void;
   isLast?: boolean;
   isStreaming?: boolean;
+  onPreviewCode?: () => void;
+  hasCodeFiles?: boolean;
 }
 
 export const ChatMessage: React.FC<ChatMessageProps> = ({
@@ -42,6 +45,8 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
   onOpenProviderModal,
   isLast,
   isStreaming,
+  onPreviewCode,
+  hasCodeFiles,
 }) => {
   const [copied, setCopied] = useState(false);
   const [copiedCodeIndex, setCopiedCodeIndex] = useState<number | null>(null);
@@ -295,23 +300,37 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                               {lang}
                             </span>
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => copyText(codeString)}
-                            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition cursor-pointer"
-                          >
-                            {copiedCodeIndex === null && copied ? (
-                              <>
-                                <Check className="w-3 h-3 text-emerald-400" />
-                                <span className="text-emerald-400">Copied!</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3 h-3" />
-                                <span>Copy</span>
-                              </>
+                          <div className="flex items-center gap-1">
+                            {/* Run in Preview button (only on runnable code blocks) */}
+                            {onPreviewCode && ['html', 'htm', 'css', 'javascript', 'js', 'jsx', 'tsx', 'typescript', 'ts'].includes(lang.toLowerCase()) && (
+                              <button
+                                type="button"
+                                onClick={onPreviewCode}
+                                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition cursor-pointer"
+                                title="Send this code to the live preview panel"
+                              >
+                                <Play className="w-3 h-3" />
+                                <span>Preview</span>
+                              </button>
                             )}
-                          </button>
+                            <button
+                              type="button"
+                              onClick={() => copyText(codeString)}
+                              className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 transition cursor-pointer"
+                            >
+                              {copiedCodeIndex === null && copied ? (
+                                <>
+                                  <Check className="w-3 h-3 text-emerald-400" />
+                                  <span className="text-emerald-400">Copied!</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3 h-3" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
                         {/* Code Content */}
                         <pre className="p-4 overflow-x-auto text-zinc-200 text-xs leading-relaxed font-mono">
