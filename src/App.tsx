@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   AppSettings,
   Attachment,
@@ -34,10 +34,12 @@ import { ModelSelectorModal } from './components/ModelSelectorModal';
 import { ParametersModal } from './components/ParametersModal';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingView } from './components/OnboardingView';
+import { CodePreviewPanel } from './components/CodePreviewPanel';
 import { ChatForgeIcon } from './components/ChatForgeLogo';
 import { parseApiError } from './utils/errorParser';
 import { enrichModelInfo } from './utils/modelSpecs';
-import { AlertCircle, ArrowDown, Sparkles, MessageSquare, Bot } from 'lucide-react';
+import { extractFilesFromConversation, hasRunnableFiles } from './utils/extractCodeFiles';
+import { AlertCircle, ArrowDown, Sparkles, MessageSquare, Bot, Code2 } from 'lucide-react';
 
 export default function App() {
   // State Initialization
@@ -78,6 +80,7 @@ export default function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
+  const [isCodePreviewOpen, setIsCodePreviewOpen] = useState(false);
 
   // Streaming State
   const [isStreaming, setIsStreaming] = useState(false);
@@ -207,6 +210,14 @@ export default function App() {
     conversations.find((c) => c.id === activeConversationId) ||
     conversations[0] ||
     fallbackConversation;
+
+  // Extract runnable code files from the active conversation's messages
+  const extractedCodeFiles = useMemo(() => {
+    if (!activeConversation?.messages) return [];
+    return extractFilesFromConversation(activeConversation.messages);
+  }, [activeConversation?.messages]);
+
+  const hasCodeFiles = extractedCodeFiles.length > 0;
 
   const activeProvider = activeConversation?.providerId || settings.activeProvider || 'google';
   const activeModelId = activeConversation?.modelId || settings.activeModel || 'gemini-3.7-flash';
@@ -623,9 +634,35 @@ export default function App() {
           onNewChat={handleNewConversation}
           credentials={credentials}
           currentTemperature={activeConversation?.temperature ?? 0.7}
-          isInspectorOpen={isInspectorOpen}
-          onToggleInspector={() => setIsInspectorOpen(!isInspectorOpen)}
+          isInspectorOpen={isInspectorOpen && !(isCodePreviewOpen && hasCodeFiles)}
+          onToggleInspector={() => {
+            setIsInspectorOpen(!isInspectorOpen);
+            if (isCodePreviewOpen) setIsCodePreviewOpen(false);
+          }}
         />
+
+          {/* Code Preview Toggle Button — appears when code files are detected */}
+          {hasCodeFiles && (
+            <button
+              onClick={() => {
+                setIsCodePreviewOpen(!isCodePreviewOpen);
+                if (!isCodePreviewOpen) setIsInspectorOpen(false);
+              }}
+              className={`absolute top-1/2 -right-3 -translate-y-1/2 z-30 p-2 rounded-full border shadow-lg transition-all cursor-pointer hidden lg:block ${
+                isCodePreviewOpen
+                  ? 'bg-emerald-600 border-emerald-400 text-white'
+                  : 'bg-zinc-800 border-zinc-600 text-emerald-400 hover:bg-zinc-700'
+              }`}
+              title={`${extractedCodeFiles.length} code file${extractedCodeFiles.length !== 1 ? 's' : ''} detected — click to ${isCodePreviewOpen ? 'close' : 'open'} preview`}
+            >
+              <Code2 className="w-4 h-4" />
+              {!isCodePreviewOpen && (
+                <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-[8px] text-white flex items-center justify-center font-bold">
+                  {extractedCodeFiles.length}
+                </span>
+              )}
+            </button>
+          )}
 
         {/* Center Main Chat Area */}
         <div className="flex-1 flex min-h-0 overflow-hidden">
@@ -711,6 +748,11 @@ export default function App() {
                           onOpenModelSelector={() => setIsModelSelectorOpen(true)}
                           onOpenProviderModal={() => setIsProviderModalOpen(true)}
                           modelInfo={messageModelInfo || activeModelInfo}
+                          hasCodeFiles={hasCodeFiles}
+                          onPreviewCode={() => {
+                            setIsCodePreviewOpen(true);
+                            setIsInspectorOpen(false);
+                          }}
                         />
                       );
                     })}
@@ -751,6 +793,17 @@ export default function App() {
             </div>
           </div>
 
+          {/* Code Preview Panel — appears when code files are detected */}
+          {isCodePreviewOpen && hasCodeFiles ? (
+            <div className="w-96 shrink-0 hidden lg:flex flex-col">
+              <CodePreviewPanel
+                files={extractedCodeFiles}
+                isOpen={isCodePreviewOpen && hasCodeFiles}
+                onToggle={() => setIsCodePreviewOpen(false)}
+              />
+            </div>
+          ) : null}
+
           {/* Right Configuration Inspector Bento Column */}
           <BentoInspector
             activeConversation={activeConversation}
@@ -761,7 +814,7 @@ export default function App() {
             onOpenProviderModal={() => setIsProviderModalOpen(true)}
             onOpenParameters={() => setIsParametersModalOpen(true)}
             onOpenModelSelector={() => setIsModelSelectorOpen(true)}
-            isOpen={isInspectorOpen}
+            isOpen={isInspectorOpen && !(isCodePreviewOpen && hasCodeFiles)}
             onToggle={() => setIsInspectorOpen(!isInspectorOpen)}
           />
         </div>
