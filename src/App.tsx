@@ -34,12 +34,12 @@ import { ModelSelectorModal } from './components/ModelSelectorModal';
 import { ParametersModal } from './components/ParametersModal';
 import { SettingsModal } from './components/SettingsModal';
 import { OnboardingView } from './components/OnboardingView';
-import { CodePreviewPanel } from './components/CodePreviewPanel';
+import { FileManagerPanel } from './components/FileManagerPanel';
 import { ChatForgeIcon } from './components/ChatForgeLogo';
 import { parseApiError } from './utils/errorParser';
 import { enrichModelInfo } from './utils/modelSpecs';
-import { extractFilesFromConversation, hasRunnableFiles } from './utils/extractCodeFiles';
-import { AlertCircle, ArrowDown, Sparkles, MessageSquare, Bot, Code2 } from 'lucide-react';
+import { extractFilesFromConversation } from './utils/extractCodeFiles';
+import { AlertCircle, ArrowDown, Sparkles, MessageSquare, Bot, FolderTree, FolderOpen } from 'lucide-react';
 
 export default function App() {
   // State Initialization
@@ -218,6 +218,17 @@ export default function App() {
   }, [activeConversation?.messages]);
 
   const hasCodeFiles = extractedCodeFiles.length > 0;
+
+  // Auto-open the File Manager the moment the AI writes (new) code files
+  const prevFileCountRef = useRef(0);
+  useEffect(() => {
+    const count = extractedCodeFiles.length;
+    if (count > prevFileCountRef.current) {
+      setIsCodePreviewOpen(true);
+      setIsInspectorOpen(false);
+    }
+    prevFileCountRef.current = count;
+  }, [extractedCodeFiles.length]);
 
   const activeProvider = activeConversation?.providerId || settings.activeProvider || 'google';
   const activeModelId = activeConversation?.modelId || settings.activeModel || 'gemini-3.7-flash';
@@ -641,21 +652,21 @@ export default function App() {
           }}
         />
 
-          {/* Code Preview Toggle Button — appears when code files are detected */}
+          {/* File Manager Toggle Button — appears when code files are detected */}
           {hasCodeFiles && (
             <button
               onClick={() => {
                 setIsCodePreviewOpen(!isCodePreviewOpen);
                 if (!isCodePreviewOpen) setIsInspectorOpen(false);
               }}
-              className={`absolute top-1/2 -right-3 -translate-y-1/2 z-30 p-2 rounded-full border shadow-lg transition-all cursor-pointer hidden lg:block ${
+              className={`absolute top-1/2 -right-3 -translate-y-1/2 z-30 p-2 rounded-full border shadow-lg transition-all cursor-pointer ${
                 isCodePreviewOpen
                   ? 'bg-emerald-600 border-emerald-400 text-white'
                   : 'bg-zinc-800 border-zinc-600 text-emerald-400 hover:bg-zinc-700'
               }`}
-              title={`${extractedCodeFiles.length} code file${extractedCodeFiles.length !== 1 ? 's' : ''} detected — click to ${isCodePreviewOpen ? 'close' : 'open'} preview`}
+              title={`${extractedCodeFiles.length} code file${extractedCodeFiles.length !== 1 ? 's' : ''} written by the AI — click to ${isCodePreviewOpen ? 'close' : 'open'} the File Manager`}
             >
-              <Code2 className="w-4 h-4" />
+              {isCodePreviewOpen ? <FolderOpen className="w-4 h-4" /> : <FolderTree className="w-4 h-4" />}
               {!isCodePreviewOpen && (
                 <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 text-[8px] text-white flex items-center justify-center font-bold">
                   {extractedCodeFiles.length}
@@ -793,16 +804,24 @@ export default function App() {
             </div>
           </div>
 
-          {/* Code Preview Panel — appears when code files are detected */}
-          {isCodePreviewOpen && hasCodeFiles ? (
-            <div className="w-96 shrink-0 hidden lg:flex flex-col">
-              <CodePreviewPanel
-                files={extractedCodeFiles}
-                isOpen={isCodePreviewOpen && hasCodeFiles}
-                onToggle={() => setIsCodePreviewOpen(false)}
+          {/* File Manager Panel — appears when code files are detected (docked on desktop, slide-over on mobile) */}
+          {isCodePreviewOpen && hasCodeFiles && (
+            <>
+              {/* Backdrop for small screens */}
+              <div
+                className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+                onClick={() => setIsCodePreviewOpen(false)}
               />
-            </div>
-          ) : null}
+              <div className="fixed inset-y-0 right-0 z-40 w-full sm:w-[26rem] lg:static lg:z-auto lg:w-[28rem] xl:w-[30rem] shrink-0 hidden sm:flex flex-col animate-fadeIn">
+                <FileManagerPanel
+                  key={activeConversation?.id || 'default_conv'}
+                  files={extractedCodeFiles}
+                  isOpen={isCodePreviewOpen && hasCodeFiles}
+                  onToggle={() => setIsCodePreviewOpen(false)}
+                />
+              </div>
+            </>
+          )}
 
           {/* Right Configuration Inspector Bento Column */}
           <BentoInspector

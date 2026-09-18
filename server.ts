@@ -1,5 +1,10 @@
 import express from 'express';
 import path from 'path';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import fsp from 'fs/promises';
+import os from 'os';
+import crypto from 'crypto';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { decryptTransitPayload } from './src/utils/security';
@@ -2260,11 +2265,317 @@ app.post('/api/chat-stream', async (req, res) => {
   }
 });
 
+// ==========================================
+// Built-in Code Runner (File Manager "Run")
+// Executes AI-generated programs on the host:
+//   java (javac+java) · python3 · node · C (gcc) · C++ (g++)
+//   · go · ruby · php · bash
+// Each run writes files into an isolated temp dir, enforces
+// output caps and a wall-clock timeout, then cleans up.
+// Intended for local / self-hosted deployments.
+// ==========================================
+
+type ServerRunLang = 'java' | 'python' | 'javascript' | 'bash' | 'c' | 'cpp' | 'go' | 'ruby' | 'php';
+
+const RUN_LANGS: Set<string> = new Set(['java', 'python', 'javascript', 'bash', 'c', 'cpp', 'go', 'ruby', 'php']);
+const RUNNER_TOOL_BIN: Record<ServerRunLang, string> = {
+  java: 'javac',
+  python: 'python3',
+  javascript: 'node',
+  bash: 'bash',
+  c: 'gcc',
+  cpp: 'g++',
+  go: 'go',
+  ruby: 'ruby',
+  php: 'php',
+};
+const RUNNER_MAX_FILES = 60;
+const RUNNER_MAX_CODE_CHARS = 400_000;
+const RUNNER_MAX_TOTAL_CHARS = 1_500_000;
+const RUNNER_MAX_OUTPUT_CHARS = 300_000;
+const RUNNER_COMPILE_TIMEOUT_MS = 30_000;
+const RUNNER_DEFAULT_TIMEOUT_MS = 12_000;
+const RUNNER_MAX_TIMEOUT_MS = 30_000;
+
+interface RunnerFile {
+  path: string;
+  code: string;
+}
+
+/** Sanitize a user/model-provided relative path (no traversal, no absolute) */
+function sanitizeRunnerPath(input: any): string | null {
+  if (typeof input !== 'string') return null;
+  let p = input.replace(/\\/g, '/').trim();
+  p = p.replace(/^\.?\//, '');
+  if (!p || p.length > 200) return null;
+  if (p.includes('..') || p.startsWith('/') || p.includes('\0')) return null;
+  if (/\s/.test(p)) return null;
+  return p;
+}
+
+interface ProcResult {
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  timedOut: boolean;
+  error?: 'tool-not-found' | 'spawn-failed';
+}
+
+/** Spawn a process with output caps, group kill on timeout */
+function runRunnerProcess(
+  cmd: string,
+  args: string[],
+  opts: { cwd: string; timeoutMs: number }
+): Promise<ProcResult> {
+  return new Promise((resolve) => {
+    let child: ReturnType<typeof spawn>;
+    try {
+      child = spawn(cmd, args, {
+        cwd: opts.cwd,
+        detached: process.platform !== 'win32',
+        env: { ...process.env },
+        stdio: ['ignore', 'pipe', 'pipe'],
+      });
+    } catch {
+      resolve({ stdout: '', stderr: '', exitCode: null, timedOut: false, error: 'spawn-failed' });
+      return;
+    }
+
+    let stdout = '';
+    let stderr = '';
+    let timedOut = false;
+    let settled = false;
+
+    const killTree = () => {
+      if (child.pid) {
+        try {
+          if (process.platform !== 'win32') process.kill(-child.pid, 'SIGKILL');
+          else child.kill('SIGKILL');
+        } catch {
+          try { child.kill('SIGKILL'); } catch { /* already dead */ }
+        }
+      }
+    };
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killTree();
+    }, opts.timeoutMs);
+
+    const finish = (exitCode: number | null, error?: ProcResult['error']) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolve({
+        stdout: stdout.slice(0, RUNNER_MAX_OUTPUT_CHARS),
+        stderr: stderr.slice(0, RUNNER_MAX_OUTPUT_CHARS),
+        exitCode,
+        timedOut,
+        error,
+      });
+    };
+
+    child.stdout!.on('data', (d: Buffer) => {
+      if (stdout.length < RUNNER_MAX_OUTPUT_CHARS) stdout += d.toString('utf8');
+    });
+    child.stderr!.on('data', (d: Buffer) => {
+      if (stderr.length < RUNNER_MAX_OUTPUT_CHARS) stderr += d.toString('utf8');
+    });
+    child.on('error', (err: NodeJS.ErrnoException) => {
+      finish(null, err.code === 'ENOENT' ? 'tool-not-found' : 'spawn-failed');
+    });
+    child.on('close', (code) => finish(code));
+  });
+}
+
+/** Resolve the main class (package-qualified) for a Java entry file */
+function javaMainClassName(mainFile: RunnerFile): string {
+  const pkgMatch = /(?:^|\n)\s*package\s+([A-Za-z_][\w.]*)\s*;/.exec(mainFile.code);
+  const base = mainFile.path.split('/').pop()!.replace(/\.java$/i, '');
+  return pkgMatch ? `${pkgMatch[1]}.${base}` : base;
+}
+
+// 5. Which language toolchains are available on the host
+let runnerStatusCache: { at: number; data: Record<string, { available: boolean; version: string | null }> } | null = null;
+
+app.get('/api/runner-status', async (_req, res) => {
+  if (runnerStatusCache && Date.now() - runnerStatusCache.at < 60_000) {
+    return res.json(runnerStatusCache.data);
+  }
+
+  const tools: Array<{ id: string; bin: string; args: string[] }> = [
+    { id: 'javac', bin: 'javac', args: ['-version'] },
+    { id: 'python3', bin: 'python3', args: ['--version'] },
+    { id: 'node', bin: 'node', args: ['--version'] },
+    { id: 'gcc', bin: 'gcc', args: ['--version'] },
+    { id: 'g++', bin: 'g++', args: ['--version'] },
+    { id: 'go', bin: 'go', args: ['version'] },
+    { id: 'ruby', bin: 'ruby', args: ['--version'] },
+    { id: 'php', bin: 'php', args: ['--version'] },
+    { id: 'bash', bin: 'bash', args: ['--version'] },
+  ];
+
+  const data: Record<string, { available: boolean; version: string | null }> = {};
+  for (const t of tools) {
+    const r = await runRunnerProcess(t.bin, t.args, { cwd: os.tmpdir(), timeoutMs: 5_000 });
+    const firstLine = (r.stderr || r.stdout).split('\n')[0]?.trim() || null;
+    data[t.id] = {
+      available: r.error === undefined && r.exitCode === 0,
+      version: r.exitCode === 0 ? firstLine : null,
+    };
+  }
+
+  runnerStatusCache = { at: Date.now(), data };
+  return res.json(data);
+});
+
+// 6. Execute a program written by the AI (File Manager → Run)
+app.post('/api/run-code', async (req, res) => {
+  try {
+    const { language, mainFile } = req.body || {};
+    const filesIn: any[] = Array.isArray(req.body?.files) ? req.body.files : [];
+
+    if (typeof language !== 'string' || !RUN_LANGS.has(language)) {
+      return res.status(400).json({ error: `Unsupported language "${language}". Supported: ${Array.from(RUN_LANGS).join(', ')}` });
+    }
+    if (filesIn.length === 0 || filesIn.length > RUNNER_MAX_FILES) {
+      return res.status(400).json({ error: 'Provide between 1 and 60 files' });
+    }
+
+    const files: RunnerFile[] = [];
+    let totalChars = 0;
+    for (const f of filesIn) {
+      const p = sanitizeRunnerPath(f?.path);
+      if (!p) return res.status(400).json({ error: `Invalid file path: ${String(f?.path).slice(0, 60)}` });
+      if (typeof f?.code !== 'string') return res.status(400).json({ error: `Missing code for ${p}` });
+      if (f.code.length > RUNNER_MAX_CODE_CHARS) return res.status(400).json({ error: `File ${p} exceeds the ${RUNNER_MAX_CODE_CHARS} character limit` });
+      totalChars += f.code.length;
+      if (totalChars > RUNNER_MAX_TOTAL_CHARS) return res.status(400).json({ error: 'Total code size exceeds the runner limit' });
+      files.push({ path: p, code: f.code });
+    }
+
+    const main = files.find((f) => f.path === mainFile) || files[0];
+
+    const timeoutMsRaw = Number(req.body?.timeoutMs);
+    const timeoutMs = Number.isFinite(timeoutMsRaw) && timeoutMsRaw > 0
+      ? Math.min(Math.max(timeoutMsRaw, 1_000), RUNNER_MAX_TIMEOUT_MS)
+      : RUNNER_DEFAULT_TIMEOUT_MS;
+
+    // Isolated scratch dir
+    const workDir = await fsp.mkdtemp(path.join(os.tmpdir(), 'chatforge-run-'));
+    try {
+      // Write project files (creating subdirectories as needed)
+      for (const f of files) {
+        const abs = path.join(workDir, f.path);
+        if (!abs.startsWith(workDir + path.sep)) {
+          return res.status(400).json({ error: 'Invalid file path resolution' });
+        }
+        await fsp.mkdir(path.dirname(abs), { recursive: true });
+        await fsp.writeFile(abs, f.code, 'utf8');
+      }
+
+      const startTime = Date.now();
+      let phase: 'compile' | 'run' = 'run';
+      let compileResult: ProcResult | null = null;
+      let runResult: ProcResult | null = null;
+
+      const lang = language as ServerRunLang;
+
+      if (lang === 'java') {
+        phase = 'compile';
+        const javaFiles = files.map((f) => f.path);
+        compileResult = await runRunnerProcess('javac', ['-d', 'classes', ...javaFiles], {
+          cwd: workDir,
+          timeoutMs: RUNNER_COMPILE_TIMEOUT_MS,
+        });
+        if (compileResult.error === 'tool-not-found') {
+          return res.json({ ok: false, exitCode: null, stdout: '', stderr: '', timedOut: false, phase: 'compile', durationMs: Date.now() - startTime, toolMissing: 'javac' });
+        }
+        if (compileResult.exitCode !== 0) {
+          return res.json({ ok: false, exitCode: compileResult.exitCode, stdout: compileResult.stdout, stderr: compileResult.stderr || 'Compilation failed.', timedOut: compileResult.timedOut, phase: 'compile', durationMs: Date.now() - startTime });
+        }
+        phase = 'run';
+        const mainClass = javaMainClassName(main);
+        runResult = await runRunnerProcess('java', ['-cp', 'classes', mainClass], { cwd: workDir, timeoutMs });
+      } else if (lang === 'python') {
+        runResult = await runRunnerProcess('python3', ['-u', main.path], { cwd: workDir, timeoutMs });
+      } else if (lang === 'javascript') {
+        runResult = await runRunnerProcess('node', [main.path], { cwd: workDir, timeoutMs });
+      } else if (lang === 'bash') {
+        runResult = await runRunnerProcess('bash', [main.path], { cwd: workDir, timeoutMs });
+      } else if (lang === 'c') {
+        phase = 'compile';
+        const cFiles = files.map((f) => f.path);
+        compileResult = await runRunnerProcess('gcc', ['-O2', '-o', 'prog', ...cFiles], {
+          cwd: workDir,
+          timeoutMs: RUNNER_COMPILE_TIMEOUT_MS,
+        });
+        if (compileResult.error === 'tool-not-found') {
+          return res.json({ ok: false, exitCode: null, stdout: '', stderr: '', timedOut: false, phase: 'compile', durationMs: Date.now() - startTime, toolMissing: 'gcc' });
+        }
+        if (compileResult.exitCode !== 0) {
+          return res.json({ ok: false, exitCode: compileResult.exitCode, stdout: compileResult.stdout, stderr: compileResult.stderr || 'Compilation failed.', timedOut: compileResult.timedOut, phase: 'compile', durationMs: Date.now() - startTime });
+        }
+        phase = 'run';
+        runResult = await runRunnerProcess(path.join(workDir, 'prog'), [], { cwd: workDir, timeoutMs });
+      } else if (lang === 'cpp') {
+        phase = 'compile';
+        const cppFiles = files.map((f) => f.path);
+        compileResult = await runRunnerProcess('g++', ['-std=c++17', '-O2', '-o', 'prog', ...cppFiles], {
+          cwd: workDir,
+          timeoutMs: RUNNER_COMPILE_TIMEOUT_MS,
+        });
+        if (compileResult.error === 'tool-not-found') {
+          return res.json({ ok: false, exitCode: null, stdout: '', stderr: '', timedOut: false, phase: 'compile', durationMs: Date.now() - startTime, toolMissing: 'g++' });
+        }
+        if (compileResult.exitCode !== 0) {
+          return res.json({ ok: false, exitCode: compileResult.exitCode, stdout: compileResult.stdout, stderr: compileResult.stderr || 'Compilation failed.', timedOut: compileResult.timedOut, phase: 'compile', durationMs: Date.now() - startTime });
+        }
+        phase = 'run';
+        runResult = await runRunnerProcess(path.join(workDir, 'prog'), [], { cwd: workDir, timeoutMs });
+      } else if (lang === 'go') {
+        const goFiles = files.map((f) => f.path);
+        runResult = await runRunnerProcess('go', ['run', ...goFiles], { cwd: workDir, timeoutMs });
+      } else if (lang === 'ruby') {
+        runResult = await runRunnerProcess('ruby', [main.path], { cwd: workDir, timeoutMs });
+      } else if (lang === 'php') {
+        runResult = await runRunnerProcess('php', [main.path], { cwd: workDir, timeoutMs });
+      }
+
+      const r = runResult!;
+      if (r.error === 'tool-not-found') {
+        return res.json({ ok: false, exitCode: null, stdout: '', stderr: '', timedOut: false, phase, durationMs: Date.now() - startTime, toolMissing: RUNNER_TOOL_BIN[lang] });
+      }
+
+      return res.json({
+        ok: !r.timedOut && r.exitCode === 0,
+        exitCode: r.exitCode,
+        stdout: r.stdout,
+        stderr: r.stderr,
+        timedOut: r.timedOut,
+        phase,
+        durationMs: Date.now() - startTime,
+      });
+    } finally {
+      fsp.rm(workDir, { recursive: true, force: true }).catch(() => {
+        try { fs.rmSync(workDir, { recursive: true, force: true }); } catch { /* best effort */ }
+      });
+    }
+  } catch (error: any) {
+    return res.status(500).json({ error: error.message || 'Runner failed' });
+  }
+});
+
 // Vite Middleware & SPA serving
 async function startServer() {
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
-      server: { middlewareMode: true },
+      server: {
+        middlewareMode: true,
+        // Accept the sandbox/preview host in addition to localhost
+        allowedHosts: true,
+        hmr: process.env.DISABLE_HMR !== 'true',
+      },
       appType: 'spa',
     });
     app.use(vite.middlewares);

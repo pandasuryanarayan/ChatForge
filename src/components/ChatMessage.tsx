@@ -25,6 +25,13 @@ import {
 import { Message, ModelInfo, ProviderId } from '../types';
 import { ProviderIcon } from './ProviderIcon';
 
+/** Fence languages that can be opened in the right-side File Manager & executed */
+const PREVIEWABLE_BLOCK_LANGS = ['html', 'htm', 'css', 'javascript', 'js', 'jsx', 'tsx', 'typescript', 'ts'];
+const RUNNABLE_BLOCK_LANGS = [
+  'python', 'py', 'java', 'c', 'cpp', 'c++', 'cc', 'h', 'hpp', 'cs', 'csharp',
+  'go', 'golang', 'rs', 'rust', 'rb', 'ruby', 'php', 'bash', 'sh', 'shell', 'zsh', 'node',
+];
+
 interface ChatMessageProps {
   message: Message;
   modelInfo?: ModelInfo;
@@ -301,18 +308,24 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({
                             </span>
                           </div>
                           <div className="flex items-center gap-1">
-                            {/* Run in Preview button (only on runnable code blocks) */}
-                            {onPreviewCode && ['html', 'htm', 'css', 'javascript', 'js', 'jsx', 'tsx', 'typescript', 'ts'].includes(lang.toLowerCase()) && (
-                              <button
-                                type="button"
-                                onClick={onPreviewCode}
-                                className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition cursor-pointer"
-                                title="Send this code to the live preview panel"
-                              >
-                                <Play className="w-3 h-3" />
-                                <span>Preview</span>
-                              </button>
-                            )}
+                            {/* Open in File Manager / Run button (on executable code blocks) */}
+                            {onPreviewCode && (() => {
+                              const blockLang = lang.toLowerCase();
+                              const isWebLang = PREVIEWABLE_BLOCK_LANGS.includes(blockLang);
+                              const isRunnable = isWebLang || RUNNABLE_BLOCK_LANGS.includes(blockLang);
+                              if (!isRunnable) return null;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={onPreviewCode}
+                                  className="flex items-center gap-1.5 px-2 py-1 rounded-md text-[11px] font-mono text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 border border-transparent hover:border-emerald-500/30 transition cursor-pointer"
+                                  title={isWebLang ? 'Open in the File Manager live preview' : 'Open in the File Manager and run it'}
+                                >
+                                  <Play className="w-3 h-3" />
+                                  <span>{isWebLang ? 'Preview' : 'Run'}</span>
+                                </button>
+                              );
+                            })()}
                             <button
                               type="button"
                               onClick={() => copyText(codeString)}

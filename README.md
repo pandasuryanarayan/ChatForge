@@ -21,6 +21,12 @@
 - **📊 Real-Time Cost & Token Tracking**: Dynamic prompt & completion token counting with exact price estimation per model.
 - **⚙️ Deep Parameter Customization**: Configure temperature, top-p, max output tokens, reasoning effort, and custom system instructions per chat or globally.
 - **📝 Rich Markdown & Code Highlighting**: GFM markdown, code block syntax highlighting, one-click copy, and table rendering.
+- **🗂️ AI File Manager (Right Panel)**: Every code file the AI writes — HTML, CSS, JS, TS, JSX, Python, Java, C, C++, Go, Ruby, PHP, Bash, SQL, JSON, YAML and more — automatically appears in a file manager docked on the right side of the chat, with a collapsible folder tree, line-numbered viewer, and per-file copy. The panel auto-opens whenever the agent produces new files, and every code block in chat has a one-click **Preview** / **Run** shortcut.
+- **🏃 Built-In Website & Program Runner**:
+  - **HTML / CSS / JS (websites)**: Selected web files are assembled into a single live document and rendered in a sandboxed iframe preview ("Run App").
+  - **Python**: Runs fully in your browser via Pyodide (WebAssembly) with a terminal-style console — `input()`, tracebacks, and automatic loading of imported packages (numpy, etc.). A **Server** backend toggle runs it with the host's `python3` instead.
+  - **Java**: Compiled with `javac` and executed with `java` on the ChatForge host (multi-file projects supported, entry point auto-detected from `public static void main` / package declarations).
+  - **Also**: Node.js, C (`gcc`), C++ (`g++`), Go, Ruby, PHP and Bash through the same sandboxed server runner (`/api/run-code`) with per-run temp dirs, output caps, and execution timeouts. Run `/api/runner-status` to see which toolchains the host exposes; missing toolchains show friendly install hints.
 - **💾 Conversation Management**:
   - Search and filter chat history
   - Pin important conversations
