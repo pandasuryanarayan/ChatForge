@@ -15,6 +15,7 @@ import {
   FolderTree,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
   Play,
   Square,
   RotateCcw,
@@ -526,9 +527,10 @@ export const FileManagerPanel: React.FC<FileManagerPanelProps> = ({
           <button
             onClick={onToggle}
             className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition cursor-pointer"
-            title="Close panel"
+            title="Collapse panel to the right"
+            aria-label="Collapse panel to the right"
           >
-            <X className="w-3.5 h-3.5" />
+            <ChevronLeft className="w-4 h-4" />
           </button>
         </div>
       </div>

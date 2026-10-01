@@ -1,6 +1,5 @@
 import React from 'react';
 import {
-  Menu,
   Sparkles,
   Sliders,
   Key,
@@ -22,6 +21,7 @@ import { ChatForgeIcon, ChatForgeWordmark } from './ChatForgeLogo';
 
 interface NavbarProps {
   onToggleSidebar: () => void;
+  isSidebarOpen?: boolean;
   activeProviderId: ProviderId;
   activeModelId: string;
   activeModelInfo?: ModelInfo;
@@ -38,6 +38,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   onToggleSidebar,
+  isSidebarOpen = true,
   activeProviderId,
   activeModelId,
   activeModelInfo,
@@ -65,10 +66,28 @@ export const Navbar: React.FC<NavbarProps> = ({
         <button
           id="toggle-sidebar-btn"
           onClick={onToggleSidebar}
-          className="p-1.5 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition shrink-0"
-          aria-label="Toggle sidebar"
+          className="group p-2 text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800 rounded-lg transition-all duration-200 shrink-0 active:scale-95"
+          aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+          aria-expanded={isSidebarOpen}
+          title={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
         >
-          <Menu className="w-5 h-5" />
+          <span className="relative block w-5 h-5" aria-hidden="true">
+            <span
+              className={`absolute h-[2px] rounded-full bg-current origin-left transition-all duration-300 ease-in-out group-hover:bg-zinc-100 ${
+                isSidebarOpen
+                  ? 'left-0.5 w-[11px] top-1/2 -translate-y-1/2 -rotate-45'
+                  : 'left-0.5 right-0.5 top-[4px] rotate-0'
+              }`}
+            />
+            <span className="absolute left-0.5 right-0.5 top-1/2 -translate-y-1/2 h-[2px] rounded-full bg-current transition-all duration-300 ease-in-out group-hover:bg-zinc-100" />
+            <span
+              className={`absolute h-[2px] rounded-full bg-current origin-left transition-all duration-300 ease-in-out group-hover:bg-zinc-100 ${
+                isSidebarOpen
+                  ? 'left-0.5 w-[11px] top-1/2 -translate-y-1/2 rotate-45'
+                  : 'left-0.5 right-0.5 bottom-[4px] rotate-0'
+              }`}
+            />
+          </span>
         </button>
 
         {/* Brand Icon & Name */}

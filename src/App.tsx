@@ -78,7 +78,9 @@ export default function App() {
   const [isModelSelectorOpen, setIsModelSelectorOpen] = useState(false);
   const [isParametersModalOpen, setIsParametersModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth >= 1024 : true
+  );
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
   const [isCodePreviewOpen, setIsCodePreviewOpen] = useState(false);
 
@@ -635,6 +637,7 @@ export default function App() {
         {/* Top Navbar */}
         <Navbar
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          isSidebarOpen={isSidebarOpen}
           activeProviderId={activeProvider}
           activeModelId={activeModelId}
           activeModelInfo={activeModelInfo}
@@ -693,11 +696,12 @@ export default function App() {
                 onOpenFullProviderModal={() => setIsProviderModalOpen(true)}
               />
             ) : (
-              <div
-                ref={chatScrollContainerRef}
-                onScroll={handleChatScroll}
-                className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 space-y-4 sm:space-y-6"
-              >
+              <div className="flex-1 flex flex-col min-h-0 relative">
+                <div
+                  ref={chatScrollContainerRef}
+                  onScroll={handleChatScroll}
+                  className="flex-1 overflow-y-auto overflow-x-hidden p-3 sm:p-6 md:p-8 space-y-4 sm:space-y-6"
+                >
                 {activeConversation?.messages.length === 0 ? (
                   <div className="max-w-2xl mx-auto py-12 px-4 text-center space-y-6">
                     <div className="flex justify-center">
@@ -771,17 +775,19 @@ export default function App() {
                   </div>
                 )}
 
-                {/* Jump to bottom floating button */}
-                {showScrollBottomBtn && (
-                  <button
-                    id="jump-to-bottom-btn"
-                    onClick={() => scrollToBottom(true)}
-                    className="fixed bottom-24 right-8 p-2.5 rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 shadow-xl backdrop-blur-sm transition animate-fadeIn"
-                    aria-label="Scroll to bottom"
-                  >
-                    <ArrowDown className="w-4 h-4" />
-                  </button>
-                )}
+              </div>
+
+              {/* Jump to bottom floating button — centered at bottom of chat area, just above input */}
+              {showScrollBottomBtn && (
+                <button
+                  id="jump-to-bottom-btn"
+                  onClick={() => scrollToBottom(true)}
+                  className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 p-2.5 rounded-full bg-zinc-800/90 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 shadow-xl backdrop-blur-sm transition animate-fadeIn"
+                  aria-label="Scroll to bottom"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+              )}
               </div>
             )}
 

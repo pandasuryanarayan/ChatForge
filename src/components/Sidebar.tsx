@@ -210,8 +210,10 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
       <nav
         id="sidebar-nav"
-        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-64 border-r border-zinc-800 bg-zinc-950/20 backdrop-blur-xs flex flex-col transition-transform duration-300 ${
-          isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        className={`fixed lg:static top-0 bottom-0 left-0 z-40 w-64 shrink-0 border-r border-zinc-800 bg-zinc-950/20 backdrop-blur-xs flex flex-col transition-all duration-300 ease-in-out ${
+          isOpen
+            ? 'translate-x-0 lg:translate-x-0 lg:ml-0 lg:opacity-100'
+            : '-translate-x-full lg:translate-x-0 lg:-ml-64 lg:opacity-0 lg:border-transparent lg:pointer-events-none'
         }`}
       >
         {/* Top: Bento New Conversation Button & Brand */}
